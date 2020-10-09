@@ -7,6 +7,16 @@ class ApiInOne_Action extends Typecho_Widget implements Widget_Interface_Do
     private $type;
     private $size;
 
+    /**
+     * ApiInOne_Action constructor.
+     *
+     * 获取传递的各参数
+     * cid - 文章id
+     * mid - 分类id
+     * page - 页码
+     * type - 文章类型
+     * size - 分页数量
+     */
     public function __construct()
     {
         $this->cid = $_REQUEST['cid'];
@@ -15,10 +25,13 @@ class ApiInOne_Action extends Typecho_Widget implements Widget_Interface_Do
         //post-page
         $this->type = empty($_REQUEST['type'])?'post':$_REQUEST['type'];
         $this->size = empty($_REQUEST['size'])?10:$_REQUEST['size'];
-        //设置头为json返回
-        header("Content-Type: application/json");
     }
 
+    /**
+     * 返回带scheme的host url
+     *
+     * @return string Host URL
+     */
     private function fetchURL(){
         if(empty($_SERVER['HTTP_X_FORWARDED_PROTO']))
             return $_SERVER['REQUEST_SCHEME']."://".$_SERVER['HTTP_HOST'];
@@ -67,8 +80,9 @@ class ApiInOne_Action extends Typecho_Widget implements Widget_Interface_Do
             Typecho_Widget::widget('Widget_Archive', ['pageSize'=>1, 'type'=>$this->type]
                 ,['cid' => $this->cid])->to($archive);
 
-            echo json_encode(['code' => 1,
-                'data'=>[
+            $this->response->throwJson([
+                'code' => 1,
+                'data' => [
                     'cid' => $archive->cid,
                     'type' => $archive->type,
                     'title' => $archive->title,
@@ -78,11 +92,10 @@ class ApiInOne_Action extends Typecho_Widget implements Widget_Interface_Do
                     'category' => implode(",",$this->fetchArray($archive->categories, "name")),
                     'time' => date("Y/m/d H:i:s", $archive->created)
                 ]]);
-            return;
         }
 
         //文章列表
-        $param = ['pageSize'=>$this->size, 'page' => $this->page];
+        $param = ['pageSize' => $this->size, 'page' => $this->page];
 
         !empty($mid) && $param['mid'] = $mid;
         switch ($this->type){
@@ -95,7 +108,7 @@ class ApiInOne_Action extends Typecho_Widget implements Widget_Interface_Do
         }
 
         $data = [];
-        while ($archive->next()){
+        while ($archive->next())
             $data[] = [
                 'cid' => $archive->cid,
                 'title' => $archive->title,
@@ -107,10 +120,15 @@ class ApiInOne_Action extends Typecho_Widget implements Widget_Interface_Do
                 'time' => date("Y/m/d H:i:s", $archive->created),
                 'comments_num' => $archive->commentsNum
             ];
-        }
-        echo json_encode(['code' => 1, 'data' => $data]);
+
+        $this->response->throwJson(['code' => 1, 'data' => $data]);
     }
 
+    /**
+     * 分类
+     *
+     * @throws Typecho_Exception
+     */
     public function category()
     {
         Typecho_Widget::widget('Widget_Metas_Category_List')->to($categroy);
@@ -129,12 +147,17 @@ class ApiInOne_Action extends Typecho_Widget implements Widget_Interface_Do
                 "permalink" => $categroy->permalink,
             ];
 
-        echo json_encode(['code' => 1, 'data'=>$data]);
+        $this->response->throwJson(['code' => 1, 'data'=>$data]);
     }
 
+    /**
+     * 评论
+     *
+     * @throws Typecho_Exception
+     */
     public function comment()
     {
-        $param = ['pageSize'=>$this->size, 'page'=>$this->page];
+        $param = ['pageSize' => $this->size, 'page'=>$this->page];
 
         !empty($this->cid) && $param['parentId'] = $this->cid;
         Typecho_Widget::widget('Widget_Comments_Recent', $param)->to($comment);
@@ -151,7 +174,7 @@ class ApiInOne_Action extends Typecho_Widget implements Widget_Interface_Do
                 'avatar' => "https://gravatar.loli.net/avatar/".md5($comment->mail)."?s=150"
             ];
 
-        echo json_encode(['code' => 1, 'data'=>$data]);
+        $this->response->throwJson(['code' => 1, 'data'=>$data]);
     }
 
     public function action(){}
